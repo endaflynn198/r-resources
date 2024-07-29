@@ -1,6 +1,14 @@
 # Multiple Linear Regression
+This is a detailed worked example of multiple linear regression in R. The analysis is based on a dataset that contains information on weight loss for a group of individuals. The topics covered include:
 
-Read the rendered HTML report [here](...).
+- Interpretation of the model coefficients
+- Hypothesis testing
+- Making predictions
+- Interaction effects
+- Model diagnostics
+- ANOVA
+
+Read the rendered HTML report [here](https://htmlpreview.github.io/?https://github.com/endaflynn198/r-resources/blob/main/multiple_linear_regression/mlr_weight_loss.html).
 
 - Note: GitHub's HTML preview does not render the Latex equations correctly. To view the report correctly, you can clone the repository and open the HTML file in a browser.
 
