@@ -8,6 +8,8 @@ An example of clustering in R using a Spotify data set covering the following to
 
 Read the rendered HTML report [here](https://htmlpreview.github.io/?https://github.com/endaflynn198/r-resources/blob/main/clustering_in_r_spotify_data/clustering.html).
 
+- Note: GitHub's HTML preview does not render the Latex equations correctly. To view the report correctly, you can clone the repository and open the HTML file in a browser.
+
 You can also run the analysis yourself by cloning the repository and running the `clustering.qmd` file.
 
 ## Project Structure
