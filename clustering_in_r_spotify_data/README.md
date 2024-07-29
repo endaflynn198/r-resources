@@ -10,7 +10,7 @@ Read the rendered HTML report [here](https://htmlpreview.github.io/?https://gith
 
 You can also run the analysis yourself by cloning the repository and running the `clustering.qmd` file.
 
-## File Structure
+## Project Structure
 ```
 📦clustering_in_r_spotify_data
  ┣ 📂clustering_files
