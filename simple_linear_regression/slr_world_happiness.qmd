@@ -1,0 +1,437 @@
+---
+title: "SLR - World Happiness Data"
+format: html
+# add toc to html
+toc: true
+toc-location: left
+code-fold: show
+code-tools: true # add code tools to html 
+
+# add author and date
+author: "Enda Flynn"
+date: "2024-07-29"
+
+theme:
+  light: cosmo
+  dark: darkly
+---
+_Note that you can collapse the code cells by clicking on the code-folding icon in the top right of the code cell._
+
+
+# Introduction 
+The World Happiness Report is an annual study released by the United Nations that investigates individual happiness levels as well as other metrics of well-being. The study provides a happiness score as well as the values of various other indicators for each of the 153 nations.
+
+This is intended to be an exhaustive analysis of the data and the model which will be useful to students and individuals wishing to learn EDA in R or to revise SLR and related concepts. We will begin with an exploratory data analysis to understand the data and the relationship between the variables. We will then fit a simple linear regression model to the data and interpret the results.
+
+
+# Exploratory Data Analysis
+
+We can inspect the data in the interactive table below. This will allow us to get a sense of the data and the variables we are working with.
+```{r}
+#| output: false   
+df = read.csv("data/world_happiness_data.csv")
+library(DT)
+```
+
+```{r}
+datatable(df, options = list(pageLength = 5))
+```
+
+
+## Comparing Sub-Saharan Africa and Western Europe
+Check unique regions:
+
+```{r}
+unique(df$Region)
+```
+
+Put "Sub-Saharan Africa" and "Western Europe" into their own dataframes for tidy boxplots:
+
+```{r}
+ssa_df = df[(df$Region=='Sub-Saharan Africa'),]
+we_df =  df[(df$Region=='Western Europe'),]
+```
+
+Make boxplots and density plots:
+
+```{r}
+par(mfrow=c(2, 2))
+boxplot(ssa_df$Happiness_score, main='Happiness Score Sub-Saharan Africa')
+boxplot(we_df$Happiness_score, main='Happiness Score West Europe')
+
+plot(density(ssa_df$Happiness_score), main='Happiness Score Sub-Saharan Africa')
+polygon(density(ssa_df$Happiness_score), col='red')
+
+plot(density(we_df$Happiness_score), main='Happiness Score West Europe')
+polygon(density(we_df$Happiness_score), col='red')
+```
+
+Further information on the happiness scores for sub-Saharan Africa and Western Europe respectively:
+
+```{r}
+summary(ssa_df$Happiness_score)
+summary(we_df$Happiness_score)
+```
+
+### Detailed Observations
+From the boxplots, density plots and the summary statistics, we observe a notable difference in the happiness scores of people from Sub-Saharan Africa and Western Europe. Some additional noteworthy observations are that:
+
+-   The median happiness score for Western Europe is 7.094 compared to 4.432 for Sub-Saharan Africa.
+
+-   The minimum happiness score for Western Europe is 5.515 compared to 2.817 for Sub-Saharan Africa.
+
+-   The maximum happiness score for Western Europe is 7.809 compared to 6.601 for Sub-Saharan Africa.
+
+-   The 25th-percentile happiness score of 6.401 for WE is greater than the maximum score for SSA.
+
+-   For both Western Europe and Sub-Saharan Africa the mean values are less than the median - this is something we expected from observing the density plots and noticing that they are both left-skewed. From visual inspection of the density plot, the Western Europe distribution is more left skewed and this is reflected in the greater difference between it's mean and median compared to Sub-Saharan Africa.
+
+    -   Despite this, it's worth noting that SSA has some degree of right skew also - this indicates that there are some countries in SSA with higher happiness scores than the majority.
+
+-   There are 39 observations for SSA compared to 21 for WE.
+
+-   Looking at the boxplots, we similarly observe that the distribution for WE is higher overall and more left-skewed than SSA as the lower 'whisker' is longer than the upper. There are no outliers.
+
+We can augment out summary statistics by quantifying the variance in the scores using:
+
+```{r}
+var(ssa_df$Happiness_score)
+var(we_df$Happiness_score)
+```
+
+And getting the IQR using:
+
+```{r}
+IQR(ssa_df$Happiness_score)
+IQR(we_df$Happiness_score)
+```
+
+These measures of variance are fairly similar for SSA and WE.
+
+## Analysing Perceptions of Corruption by Region 
+
+The boxplots show that the perceptions of corruption per region are surprisingly similar. We can distinguish two sets of countries based on this analysis:
+
+-   Those with a relatively lower score: "North America and ANZ" and "Western Europe."
+
+-   Those with a relatively high score: the remaining regions.
+
+Answers to other questions:
+
+-   The region with the highest variability in the perceptions of corruption is Western Europe.
+-   The region with the highest median value for the variability in perceptions of corruption is Central and Eastern Europe.
+-   The region with the lowest recorded score for perceptions of corruption is Southeast Asia - this value is an outlier.
+
+```{r}
+# use ggplot2 to rotate labels...
+library(ggplot2)
+ggplot(df, aes(x = Region, 
+               y = Perceptions_of_corruption,
+               fill = Region)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+## Using the Correlation and Pairs Plot to Examine the Relationships of the Variables
+
+Happiness score and Log_GDP_Per_Capita:
+
+-   In the pairs plot we observe a strong linear relationship between these two variables which is evidenced by the positive correlation of 0.7754. This is the highest correlation with happiness score among the numeric variables.
+
+Happiness score and Social_support:
+
+-   In the pairs plot we observe a strong linear relationship between these two variables which is evidenced by the positive correlation of 0.765 This is the third highest correlation with happiness score among the numeric variables.
+
+Happiness score and Healthy_life_expectancy:
+
+-   In the pairs plot we observe a strong linear relationship between these two variables which is evidenced by the positive correlation of 0.770. This is the second highest correlation with happiness score among the numeric variables.
+
+Happiness score and Freedom_to_make_life_choices:
+
+-   In the pairs plot we observe a weaker linear relationship between these two variables which is evidenced by the positive correlation of 0.5906. This is the fourth highest correlation with happiness score among the numeric variables.
+
+Happiness score and Generosity:
+
+-   In the pairs plot we do not observe a clear linear relationship between these two variables which is evidenced by the low correlation of 0.069. This is the fifth highest correlation with happiness score among the numeric variables.
+
+Happiness score and Perceptions_of_corruption:
+
+-   In the pairs plot we do not observe a slight negative linear relationship between these two variables which is also reflected in the negative correlation of -0.4183. This is the only negative correlation with happiness score among the numeric variables.
+
+```{r}
+# get numeric columns
+nums = unlist(lapply(df, is.numeric), use.names = FALSE)  
+pairs_df = df[, nums]
+
+pairs(pairs_df)
+```
+
+```{r}
+cor(pairs_df)
+```
+
+### Neater Option
+Note that we can also use the `corrplot` package to visualise the correlation matrix for a neater output:
+
+```{r}
+cor_matrix <- cor(pairs_df)
+# visualise the correlation matrix
+heatmap(cor_matrix, col = colorRampPalette(c("blue", "white", "red"))(100), 
+        symm = TRUE, margins = c(10, 10))
+```
+
+
+## Which Predictor Variable for Happiness Score as Response Variable?
+
+Based on the results so far, I would expect the Log_GDP_Per_Capita to be a better predictor variable in a regression model than Freedom_to_make_life_choices. The reason I select this is because:
+
+-   The correlation for Log_GDP_Per_Capita and the Happiness_score is 0.775 compared to 0.591 for Freedom_to_make_life_choices and the Happiness_score which indicates a much stronger linear relationship.
+-   From observation of the pairs plot we observe less variability in the relationship between Log_GDP_Per_Capita and the Happiness_score compared to Freedom_to_make_life_choices and the Happiness_score.
+
+# Regression Modelling
+
+## Fitting a simple linear regression model 
+
+The mathematical statement of the simple linear regression model is given by $$
+Y_i = \beta_0 + \beta_1X_i + \epsilon_i,\quad i =1, ..., n,
+$$
+
+where $\beta_0$, $\beta_1$ are parameters for the intercept and slope of the model respectively - these are fixed, unknown constants which we estimate with the statistics $\hat{\beta_0}$ and $\hat{\beta_1}$. The remaining values $Y_i, X_i$ and $\epsilon_i$ are the values of the dependent/response variable, the independent/predictor variable, and the error for observation $i.$
+
+The predictions of our model will be given by $$
+\hat{Y_i} = \hat{\beta_0} + \hat{\beta_1}X_i,\quad i =1, ..., n,
+$$ where:
+
+-   $\hat{Y_i}$ is the predicted Happiness_score for observation $i$.
+
+-   $\hat{\beta_0}$ is the estimated intercept term - it is the model's predicted happiness score when $X=0$ (i.e., the value of the dependent variable when the independent variable is 0).
+
+-   $\hat{\beta_1}$ is the slope of the regression line - in our model it is the predicted increase in the happiness score for a one unit increase in Log_GDP_Per_Capita.
+
+```{r}
+fit = lm(Happiness_score ~ Log_GDP_Per_Capita, data=df)
+summary(fit)
+```
+
+We can use these values to express our predicted values for the happiness score as: 
+$\hat{\text{Happiness_score} } = -1.19865 + 0.71774(\text{Log_GDP_Per_Capita_i})$
+
+### Interpreting the estimates of intercept and slope terms
+
+We can interpret the estimates of the intercept and slope term as follows:
+
+-   When Log_GDP_Per_Capita is 0, the predicted happiness score is -1.19865. Considering that this is negative, it's important to note the context that a Log_GDP_Per_Capita of 0 is not practically meaningful in a real-world scenario.
+
+-   For a unit increase in the the Log_GDP_Per_Capita, the predicted happiness score increases by 0.71774.
+
+## Calculate and interpret the 95% confidence intervals for β0 and β1.
+
+The confidence intervals tell us:
+
+-   We are 95% confident that the true value of $\beta_0$ is between -2.0795752 and -0.3177169.
+
+-   We are 95% confident that the true value of $\beta_1$ is between 0.6237481 and 0.8117289.
+
+```{r}
+confint(fit)
+```
+
+## Hypothesis Testing
+### Compute and interpret the hypothesis test H0: β0 = 0 vs Ha: β0 ̸= 0. 
+
+We want to test $H_O: \beta_0 = 0$ vs $H_A: \beta_0 \neq 0$
+
+To do this we need to do a t-test.
+
+1.  Calculate: $T = \frac{\hat{\beta_0} - \beta_0 } {\sqrt{\hat{Var(\hat{\beta_0)}}}} = \frac{\hat{\beta}_0-\beta_0}{\sqrt{M S E\left[\frac{1}{n}+\frac{\bar{X}^2}{S_{x x}}\right]}}$
+
+We find that the $T=-2.69$ - the same value we observed in the output of the summary function above.
+
+```{r}
+# calculate the T statistic
+N = length(df$Happiness_score)
+MSE = sum(fit$residuals^2/(N-2))
+SXX = sum((df$Log_GDP_Per_Capita - mean(df$Log_GDP_Per_Capita))^2)
+VARB0 = MSE * (1/N + (mean(df$Log_GDP_Per_Capita)^(2)/SXX))
+T = (fit$coefficients[1] - 0) / sqrt(VARB0)
+print(T)
+```
+
+We can compare ${|T|}$ with the $t_{1-\alpha/2, n-2}$ quantile of the t-distribution which we calculate below. As $|-2.69| > 1.975799$ we reject the $H_0.$
+
+At the $\alpha=0.05$ significance level, the evidence is not strong enough to indicate that $\beta_0 = 0.$
+
+This indicates that when the Log_GDP_Per_Capita is at 0, the happiness score is non-zero. In other words, the true coefficient for the intercept $\beta_0$ is non-zero.
+
+Note also that the quantile from the t-distribution is close to 1.96 - this is due to the high number of observations which causes the t-distribution to approach the normal distribution.
+
+```{r}
+qt(1-0.025, N-2)
+qnorm(1-0.025)
+```
+
+Finally, we calculate the p-value. As the p-value is less than 0.05, we reject the null hypothesis and make the same conclusion as with the t-statistic method.
+
+Note that this also agrees with the p-value output of the summary function.
+
+```{r}
+2*(1 - pt(abs(T), df=N-2))
+```
+
+### Compute and interpret the hypothesis test H0 : β1 = 0 vs Ha : β1 != 0. 
+
+We want to test $H_O: \beta_1 = 0$ vs $H_A: \beta_1 \neq 0$
+
+To do this we need to do a t-test.
+
+1.  Calculate: $T = \frac{\hat{\beta_1} - \beta_1 } {\sqrt{\hat{Var(\hat{\beta_1)}}}} = \frac{\hat{\beta}_1-\beta_1}{\sqrt\frac{M S E}{S_{XX}}}$
+
+We find that the $T=15.08778$ - the same value we observed in the output of the summary function above.
+
+```{r}
+# calculate the T statistic
+N = length(df$Happiness_score)
+MSE = sum(fit$residuals^2/(N-2))
+SXX = sum((df$Log_GDP_Per_Capita - mean(df$Log_GDP_Per_Capita))^2)
+VARB1 = MSE / SXX
+T = (fit$coefficients[2] - 0) / sqrt(VARB1)
+print(T)
+```
+
+Comparing ${|T|}$ with the $t_{1-\alpha/2, n-2}$ quantile of the t-distribution which we calculate below. As $|15.08778| > 1.975799$ we reject the $H_0.$
+
+At the $\alpha=0.05$ significance level, the evidence is not strong enough to indicate that $\beta_1 = 0.$
+
+This indicates that the true coefficient (the slope term in the model) for Log_GDP_Per_Capita is not equal to 0.
+
+```{r}
+qt(1-0.025, N-2)
+```
+
+Finally, we calculate the p-value. As the p-value is less than 0.05, we reject the null hypothesis and make the same conclusion as with the t-statistic method. Note that the p-value prints out as 0 due to the extremely small value - in the R summary function this is \< 2e-16.
+
+```{r}
+p_val = 2*(1 - pt(abs(T), df=N-2))
+print(p_val)
+```
+
+### Interpreting the F-statistic
+
+If we want to test the hypothesis that $H_0: \beta_1=0$, $H_A: \beta_1\neq 0$ we can use the F-test.
+
+The F-statistic in the summary is found using $F = \frac{MSR}{MSE}$ and, in the context of the simple linear regression model, is distributed with $1, n-2$ degrees of freedom.
+
+Based on the p-value below we reject the null hypothesis that $\beta_1=0$. Note that this agrees with the conclusions of the t-test for $\beta_1$ above.
+
+```{r}
+summary(fit)
+```
+
+#### Manually Calculating the F-value and p-value
+We can reproduce the F value ourselves using:
+
+```{r}
+# difference between what we expected and what happened...
+MSR = sum((fitted(fit) - mean(df$Happiness_score))^2) / 1 
+# typical error...
+MSE = sum(fit$residuals^2 / (N-2))
+F = MSR / MSE
+print(F)
+```
+
+We can also obtain the p-value using:
+
+```{r}
+alpha = 0.05
+# one tail so we don't need alpha / 2
+FDIST = qf(1-alpha, 1, N-2)
+print(FDIST)
+PVALUE = pf(1-F, 1, N-2)
+print(PVALUE)
+```
+
+## The R-squared value 
+
+The R-squared value is given by $0.6012$ for this model.
+
+The coefficient of determination $R^2$ represents the proportion of variance in the dependent variable (Happiness_score in this case) that is predictable from the independent variable (Log GDP per capita).
+
+In the context of a linear regression model, $R^2$ is a measure of how well the model fits the data.
+
+We find that approximately 60.12% of the observed variation in the Happiness_score can be explained by the Log GDP per capita. This indicates that the fit is not great but it still has some explanatory power.
+
+```{r}
+SST = sum((df$Happiness_score - mean(df$Happiness_score))^2)
+SSE = sum(fit$residuals^2)
+
+R2 = (SST - SSE) / SST
+print(R2)
+```
+
+## Residual Standard Error (RSE)
+
+RSE is a measure of the quality of a linear regression fit.
+
+Due to the presence of error in the model (as stated in model specification), we are not capable of perfectly predicting our response variable (Happiness_score) from the predictor variable (Log GDP per capita).
+
+We can say that the Log GDP per capita accurately predicts the Happiness_score with an error of 0.7047 on average.
+
+Note also that RMSE and RSE are identical in the context of the SLR model.
+
+```{r}
+N = length(df$Happiness_score)
+RMSE = sqrt(SSE/(N-2))
+print(RMSE)
+```
+
+## Comments on the shape of the 95% confidence intervals for the estimated values of Y
+
+The 95% CI for the estimated values of Y corresponding to the X values is given by: 
+$$\hat{Y}^* \pm t_{\alpha / 2, n-2} \sqrt{\operatorname{MSE}\left(\frac{1}{n}+\frac{\left(X^*-\bar{X}\right)^2}{S_{X X}}\right)}$$
+
+In our plot below, we can observe that the confidence interval is more narrow in the middle and wider towards the lower and upper values of Log GDP per capita.
+
+Due to the high number of observations in the dataset the CI is quite narrow overall. If we had less observations, there would likely be more variability and uncertainty in our estimates, leading to a wider confidence interval.
+
+```{r}
+N = length(df$Log_GDP_Per_Capita)
+SXX = sum((df$Log_GDP_Per_Capita - mean (df$Log_GDP_Per_Capita))^2  )
+MSE = SSE / (N-2)
+VAR_Y = MSE*(1/N + (df$Log_GDP_Per_Capita - mean(df$Log_GDP_Per_Capita))^2 / SXX)
+Yhat = fitted(fit)
+# cbind(Yhat - qt(1-alpha/2, N-2)*sqrt(VAR_Y),Yhat + qt(1-alpha/2, N-2)*sqrt(VAR_Y) )
+
+plot(df$Log_GDP_Per_Capita, df$Happiness_score, xlab="Log GDP per capita", ylab="Happiness_score")
+lines(df$Log_GDP_Per_Capita, Yhat, col="blue")
+lines(df$Log_GDP_Per_Capita, Yhat + qt(1-alpha/2, N-2)*sqrt(VAR_Y), col="red")
+lines(df$Log_GDP_Per_Capita, Yhat - qt(1-alpha/2, N-2)*sqrt(VAR_Y), col="red")
+```
+
+## Comments on the Shape of the 95% prediction intervals for the estimated values of Y corresponding to the X values in the model
+
+The 95% prediction interval for the estimated values of Y corresponding to the X values is given by: $\hat{Y}^* \pm t_{\alpha / 2, n-2} \sqrt{\operatorname{MSE}\left(1+\frac{1}{n}+\frac{\left(X^*-\bar{X}\right)^2}{S_{X X}}\right)}$
+
+We note from the plot below that the prediction intervals in green are much wider than the confidence intervals in red. They almost cover the entire range of observed data points. We are 95% sure that *new observations* will lie within the prediction intervals.
+
+```{r}
+N = length(df$Log_GDP_Per_Capita)
+SXX = sum((df$Log_GDP_Per_Capita - mean (df$Log_GDP_Per_Capita))^2  )
+MSE = SSE / (N-2)
+# note difference in formula compared to VAR_Y above
+VAR_E = MSE*(1 + 1/N + (df$Log_GDP_Per_Capita - mean(df$Log_GDP_Per_Capita))^2 / SXX)
+
+Yhat = fitted(fit)
+# cbind(Yhat - qt(1-alpha/2, N-2)*sqrt(VAR_E),Yhat + qt(1-alpha/2, N-2)*sqrt(VAR_E) )
+
+plot(df$Log_GDP_Per_Capita, df$Happiness_score, xlab="Log GDP per capita", ylab="Happiness_score")
+lines(df$Log_GDP_Per_Capita, Yhat, col="blue")
+
+# confidence intervals
+lines(df$Log_GDP_Per_Capita, Yhat + qt(1-alpha/2, N-2)*sqrt(VAR_Y), col="red")
+lines(df$Log_GDP_Per_Capita, Yhat - qt(1-alpha/2, N-2)*sqrt(VAR_Y), col="red")
+
+# prediction intervals
+lines(df$Log_GDP_Per_Capita, Yhat + qt(1-alpha/2, N-2)*sqrt(VAR_E), col="green")
+lines(df$Log_GDP_Per_Capita, Yhat - qt(1-alpha/2, N-2)*sqrt(VAR_E), col="green")
+```
